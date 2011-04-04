@@ -4,10 +4,13 @@ from django.shortcuts import get_object_or_404
 from django.utils.translation import ugettext as _
 
 from snapboard.auth.decorators import login_required
-from snapboard.forms import *
-from snapboard.models import *
-from snapboard.utils import *
 
+from snapboard.forms import PostForm, UserSettingsForm, UserNameForm, ThreadForm
+
+from snapboard import models as smodels
+
+from snapboard.utils import json_response, render_and_cache, render, sanitize,\
+    toggle_boolean_field 
 
 # Ajax
 # ----
@@ -19,7 +22,7 @@ def preview(request):
 @staff_member_required
 @json_response
 def sticky(request):
-    thread = get_object_or_404(Thread, pk=request.POST.get('id'))
+    thread = get_object_or_404(smodels.Thread, pk=request.POST.get('id'))
     if toggle_boolean_field(thread, 'sticky'):
         return {'link':_('unstick'), 'msg':_('This topic is sticky!')}
     else:
@@ -28,7 +31,7 @@ def sticky(request):
 @staff_member_required
 @json_response
 def close(request):
-    thread = get_object_or_404(Thread, pk=request.POST.get('id'))
+    thread = get_object_or_404(smodels.Thread, pk=request.POST.get('id'))
     if toggle_boolean_field(thread, 'closed'):
         return {'link':_('open'), 'msg':_('This topic is closed.')}
     else:
@@ -37,7 +40,7 @@ def close(request):
 @login_required
 @json_response
 def watch(request):
-    thread = get_object_or_404(Thread, pk=request.POST.get('id'))
+    thread = get_object_or_404(smodels.Thread, pk=request.POST.get('id'))
     try:
         # TODO: how to delete this rel
         # thread.subscribers.objects.get(user=request.user, thread=thread).delete()
@@ -45,8 +48,8 @@ def watch(request):
             'link': _('watch'), 
             'msg': _('This topic has been removed from your favorites.')
         }
-    except: # WatchList.DoesNotExist:
-        WatchList.objects.create(user=request.user, thread=thread)
+    except: # smodels.WatchList.DoesNotExist:
+        smodels.WatchList.objects.create(user=request.user, thread=thread)
         return {
             'link': _('dont watch'), 
             'msg': _('This topic has been added to your favorites.')
@@ -56,7 +59,7 @@ def watch(request):
 @json_response
 def edit(request):
     pk = request.POST.get('id')
-    post = get_object_or_404(Post.objects.get_user_query_set(request.user), pk=pk)
+    post = get_object_or_404(smodels.Post.objects.get_user_query_set(request.user), pk=pk)
     form = PostForm(request.POST, request=request, instance=post)
     if form.is_valid():
         post = form.save()
@@ -67,22 +70,22 @@ def edit(request):
 # -----
 
 def category_list(request, template='snapboard/category_list.html'):
-    ctx = {'categories': Category.objects.all()}    
+    ctx = {'categories': smodels.Category.objects.all()}    
     return render_and_cache(template, ctx, request)
 
 def category(request, slug, template='snapboard/category.html'):
-    category = get_object_or_404(Category, slug=slug)
+    category = get_object_or_404(smodels.Category, slug=slug)
     threads = category.thread_set.get_user_query_set(request.user)
     ctx = {'category': category, 'threads': threads}
     return render_and_cache(template, ctx, request)
 
 def thread_list(request, template='snapboard/thread_list.html'):
     # TODO: Keep sticky posts from clogging up the list.
-    threads = Thread.objects.get_user_query_set(request.user).order_by('-date')
+    threads = smodels.Thread.objects.get_user_query_set(request.user).order_by('-date')
     return render_and_cache(template, {'threads': threads}, request)
 
 def thread(request, cslug, tslug, template='snapboard/thread.html'):
-    thread = get_object_or_404(Thread.objects.filter(category__slug=cslug), slug=tslug)
+    thread = get_object_or_404(smodels.Thread.objects.filter(category__slug=cslug), slug=tslug)
     form = PostForm(request.POST or None, request=request)
     if form.is_valid():
         post = form.save(thread)
@@ -98,7 +101,7 @@ def thread(request, cslug, tslug, template='snapboard/thread.html'):
     return render_and_cache(template, ctx, request)
 
 def search(request, template='snapboard/search.html'):
-    threads = Thread.objects.get_user_query_set(request.user)
+    threads = smodels.Thread.objects.get_user_query_set(request.user)
     q = request.GET.get('q')
     if q is not None:
         threads = threads.filter(name__icontains=q)
@@ -108,7 +111,7 @@ def search(request, template='snapboard/search.html'):
 def new_thread(request, slug=None, template='snapboard/new_thread.html'):
     category = None
     if slug is not None:
-        category = get_object_or_404(Category, slug=slug)
+        category = get_object_or_404(smodels.Category, slug=slug)
     form = ThreadForm(request.POST or None, request=request, category=category)
     if form.is_valid():
         thread = form.save()
@@ -117,12 +120,12 @@ def new_thread(request, slug=None, template='snapboard/new_thread.html'):
 
 @login_required
 def favorites(request, template='snapboard/favorites.html'):
-    threads = Thread.objects.favorites(request.user)
+    threads = smodels.Thread.objects.favorites(request.user)
     return render(template, {'threads': threads}, request)
 
 @login_required
 def edit_settings(request, template='snapboard/edit_settings.html'):
-    settings, _ = UserSettings.objects.get_or_create(user=request.user)
+    settings, _ = smodels.UserSettings.objects.get_or_create(user=request.user)
     data = request.POST or None
     sform = UserSettingsForm(data, instance=settings, request=request)
     uform = UserNameForm(data, instance=request.user)

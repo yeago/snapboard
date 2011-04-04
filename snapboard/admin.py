@@ -1,4 +1,4 @@
-from snapboard.models import *
+from snapboard import models as smodels
 from django.contrib import admin
 
 class CategoryAdmin(admin.ModelAdmin):
@@ -16,8 +16,8 @@ class PostAdmin(admin.ModelAdmin):
     raw_id_fields = ('thread', 'user',)
 
 
-admin.site.register(Category, CategoryAdmin)
-admin.site.register(Post, PostAdmin)
-admin.site.register(Thread, ThreadAdmin)
-#admin.site.register(WatchList, WatchListAdmin)
-admin.site.register(UserSettings)
+admin.site.register(smodels.Category, CategoryAdmin)
+admin.site.register(smodels.Post, PostAdmin)
+admin.site.register(smodels.Thread, ThreadAdmin)
+#admin.site.register(smodels.WatchList, WatchListAdmin)
+admin.site.register(smodels.UserSettings)

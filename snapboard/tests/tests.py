@@ -8,8 +8,8 @@ from django.core.urlresolvers import reverse
 from django.test import TestCase
 
 from snapboard.urls import feeds
-from snapboard.models import *
-from snapboard.utils import *
+from snapboard import models as smodels
+#from snapboard.utils import *
 
 
 class ViewsTest(TestCase):
@@ -92,7 +92,7 @@ class ViewsTest(TestCase):
 
         # Creating a post redirects to the new post.
         r = self.client.post(uri, {"subject": "subject", "post": "post"})
-        new_post = Post.objects.order_by("-date")[0]
+        new_post = smodels.Post.objects.order_by("-date")[0]
         expected_uri = new_post.get_url()
         self.assertRedirects(r, expected_uri)
         
@@ -112,7 +112,7 @@ class ViewsTest(TestCase):
         
         # Creating a thread redirects to the new thread.
         r = self.client.post(uri, {"subject": "subject", "post": "post"})
-        new_thread = Thread.objects.order_by("-date")[0]
+        new_thread = smodels.Thread.objects.order_by("-date")[0]
         expected_uri = new_thread.get_url()
         self.assertRedirects(r, expected_uri)
 
@@ -141,7 +141,7 @@ class ViewsTest(TestCase):
         self.login()
         uri = reverse("sb_new_thread", args=["category"])        
         r = self.client.post(uri, {"subject": "thread", "post": "post"})
-        new_thread = Thread.objects.order_by("-date")[0]
+        new_thread = smodels.Thread.objects.order_by("-date")[0]
         self.assertEquals(new_thread.slug, "thread-1")
         
 
@@ -150,7 +150,7 @@ class ThreadTest(TestCase):
 
     def test_get_notify_recipients(self):
         # should just return a set of the admins
-        r = Thread.objects.get(pk=1).get_notify_recipients()
+        r = smodels.Thread.objects.get(pk=1).get_notify_recipients()
         self.assertEquals(r, set([t[1] for t in settings.ADMINS]))
         
         
@@ -168,6 +168,7 @@ class APITest(TestCase):
     fixtures = ["test_data.json"]
     
     def setUp(self):
+        # This doesn't make the least bit of sense to me. ~ subsume
         self._old_SB_ENABLE_API = settings.SB_ENABLE_API
         settings.SB_ENABLE_API = True
     
