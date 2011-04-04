@@ -96,7 +96,7 @@ class Thread(models.Model):
     get_absolute_url = get_url
 
 class Post(models.Model):
-    user = models.ForeignKey('auth.User', verbose_name=_('user'))
+    user = models.ForeignKey('auth.User', verbose_name=_('user'),related_name="forumpost_set")
     thread = models.ForeignKey(Thread, verbose_name=_('thread'))
     text = models.TextField(verbose_name=_('text'))
     date = models.DateTimeField(verbose_name=_('date'), null=True)
